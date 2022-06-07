@@ -1,12 +1,14 @@
 import pandas as pd
-import pathlib
-import os.path 
 import numpy as np
+import tensorflow as tf
+import tensorflow_addons as tfa
 
 def PrepareData(DataInPath):
+    print("\nImporting Data...")
     RawData = pd.read_csv(DataInPath)
+    print("Filtering & Processing Data...")
     LiftoffData = RawData[RawData['LIFTOFF'] == 1]
-    MLData = LiftoffData.drop(['TIME_OFFSET', 'FLIGHT_ID', 'FLIGHT_ID.1', 'STATED_SEGMENT_START_OF_TAKEOFF', 'APT_AIRCRAFT_RUNWAY_STAGE.1',
+    MLData = LiftoffData.drop(['TIME_OFFSET', 'FLIGHT_ID', 'FLIGHT_ID.1', 'STATED_SEGMENT_START_OF_TAKEOFF', 'APT_AIRCRAFT_RUNWAY_STAGE',
                             'LIFTOFF', 'TIME_ON_GROUND_BEFORE_LIFTOFF_(SECONDS)', 'P64: Duration of Taxi Out (Minutes)',
                             'DURATION','SPEED_SOUND_START_EVENT', 'AFE_ALT', 'TAS_START_EVENT', 'P64: True Airspeed at Liftoff (knots)',
                             'GS_SEGMENT', 'TAS_SEGMENT', 'MACH_NUMBER_SEGMENT', 'LAT', 'LON', 'DISTANCE_START_EVENT', 'DISTANCE_FROM_RUNWAY_END_AT_DETECTED_LIFTOFF',
@@ -21,13 +23,18 @@ def PrepareData(DataInPath):
                             'STAGE_LENGTH_ID', 'STAGE_LENGTH_ID.1', 'DISTANCE_FROM_RUNWAY_END.1'], axis=1)
 
     MLData.rename(columns = {'ACTYPE.1' : 'ACTYPE'}, inplace = True)
-
+    MLData.rename(columns = {'APT_AIRCRAFT_RUNWAY_STAGE.1' : 'APT_AIRCRAFT_RUNWAY_STAGE'}, inplace = True)
+    
+    MLData = MLData.dropna()
     MLData = MLData.sample(frac = 1, replace = False)
 
-    TrnValSplit = int(0.70 * len(MLData.index))
-    ValTestSplit = int(0.15 * len(MLData.index))
-    trn, val = np.split(MLData, indices_or_sections = [TrnValSplit], axis = 0)
-    val, test = np.split(val, indices_or_sections = [ValTestSplit], axis = 0)
+    #Need to figure out a way to not drop these string columns, but for now will keep it as this
+    MLData = MLData.drop(['ACTYPE', 'APT_AIRCRAFT_RUNWAY_STAGE'], axis = 1)
+
+    print("Preparing Data for ML...")
+
+    trn, val, test = np.split(MLData, [int(0.7*len(MLData)), int(0.85*len(MLData))], axis = 0)
+
 
     trn_independent = trn.drop('N1', axis = 1)
     val_independent = trn.drop('N1', axis = 1)
@@ -42,9 +49,22 @@ def PrepareData(DataInPath):
 
     return FinalDataset
 
-#def DefineNNArchitecture():
-    #Need to get tensor flow and addons installed in a virtual environment before I can do this part
-    #Create and compile a neural net architecture - may want to make parametric to find best settings
+def DefineNNArchitecture(Dataset):
+    print("Creating ML Model...\n")
+    normlayer = tf.keras.layers.Normalization()
+    normlayer.adapt(Dataset['trn']['i'])
+
+    model = tf.keras.Sequential([
+        normlayer,
+        tf.keras.layers.Dense(8, activation = 'tanh'),
+        tf.keras.layers.Dense(1, activation = 'linear')])
+
+    model.compile(
+                optimizer = tf.keras.optimizers.Adam(learning_rate = 0.1),
+                loss = 'mse',
+                metrics = [tf.metrics.MeanSquaredError(), tf.keras.metrics.MeanAbsoluteError(), tfa.metrics.r_square.RSquare()])
+
+    return model
 
 #def TrainModel():
     #Train the model - save the best fit model
@@ -55,6 +75,10 @@ def PrepareData(DataInPath):
 #Actually run the program
 #MainPath = pathlib.Path(__file__).parent.parent.resolve()
 #OutPath = os.path.join(MainPath, "Out")
-DataPath = 'C:/Users/Zayn.Roohi/Documents/OASIS/takeoff_distance_A320_A330_A340.csv'
+DataPath = 'C:/Users/Zayn.Roohi/Documents/OASIS/TestDataLarge.csv' #takeoff_distance_A320_A330_A340.csv'
 
 Dataset = PrepareData(DataPath)
+model = DefineNNArchitecture(Dataset)
+
+#Simple data structures: https://www.tensorflow.org/tutorials/keras/regression
+#Create data structures: https://www.tensorflow.org/tutorials/structured_data/preprocessing_layers
