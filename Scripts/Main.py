@@ -97,9 +97,9 @@ def DefineAndTrainNN(Dataset, MainPath):
                 callbacks = [checkpoint_callback, learning_callback])
 
     model.load_weights(os.path.join(MainPath, 'Out/Checkpoints/checkpoint'))
-    model.save(os.path.join(MainPath, 'Out/Models/model'))
+    model.save(os.path.join(MainPath, 'Out/Models'))
     print('\n-----------Best Training Data:-----------\n')
-    print(model.evaluate(Dataset['trn']['i'], Dataset['trn']['d']))
+    print(model.evaluate(Dataset['test']['i'], Dataset['test']['d']))
 
 
 #def PlotOutputs():
