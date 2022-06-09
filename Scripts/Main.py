@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_addons as tfa
 import pathlib, os
+import matplotlib.pyplot as plt
 
 def PrepareData(DataInPath):
     RawData = pd.read_csv(DataInPath)
@@ -22,19 +23,19 @@ def PrepareData(DataInPath):
                             'DISTANCE_FROM_THRESHOLD_AT_POINT_ONE', 'DISTANCE_FROM_POINT_ONE_FEET', 'GROUNDSPEED_AT_POINT_ONE_KNOTS',
                             'WELL-BEHAVED_TRAJECTORY', 'LATITUDE_AT_POINT_ONE', 'LONGITUDE_AT_POINT_ONE', 'LATITUDE_AT_DETECTED_AIRBORNE_POINT_IN_RUNWAY_VICINITY',
                             'LONGITUDE_AT_DETECTED_AIRBORNE_POINT_IN_RUNWAY_VICINITY', 'ACTYPE', 'P64  Air Temperature (outside) at Start of Event (library) (Deg Celsius)',
-                            'STAGE_LENGTH_ID', 'STAGE_LENGTH_ID.1', 'DISTANCE_FROM_RUNWAY_END.1'], axis=1)
+                            'STAGE_LENGTH_ID', 'STAGE_LENGTH_ID.1', 'DISTANCE_FROM_RUNWAY_END.1', 'ACTYPE.1'], axis=1)
 
-    MLData.rename(columns = {'ACTYPE.1' : 'ACTYPE'}, inplace = True)
-    MLData.rename(columns = {'APT_AIRCRAFT_RUNWAY_STAGE.1' : 'APT_AIRCRAFT_RUNWAY_STAGE'}, inplace = True)
-    
-    #Change: Split the APT_AIRCRAFT_RUNWAY_STAGE column into 4 (and possible drop STAGE?)
+    MLData[['AIRPORT', 'AIRCRAFT_TYPE', 'RUNWAY', 'STAGE']] = MLData['APT_AIRCRAFT_RUNWAY_STAGE.1'].str.split('_', expand=True)
+    MLData = MLData.drop('APT_AIRCRAFT_RUNWAY_STAGE.1', axis = 1)
     MLData = MLData.dropna()
     MLData = MLData.sample(frac = 1, replace = False)
-    #Classifications don't do anything right now, will add them in next
-    ClassificationData = MLData[['ACTYPE', 'APT_AIRCRAFT_RUNWAY_STAGE']]
-    MLData = MLData.drop(['ACTYPE', 'APT_AIRCRAFT_RUNWAY_STAGE'], axis = 1)
 
-    trn, val, test = np.split(MLData, [int(0.7*len(MLData)), int(0.85*len(MLData))], axis = 0)
+    MLData['AIRPORT'] = pd.factorize(MLData.AIRPORT)[0] + 1
+    MLData['AIRCRAFT_TYPE'] = pd.factorize(MLData.AIRCRAFT_TYPE)[0] + 1
+    MLData['RUNWAY'] = pd.factorize(MLData.RUNWAY)[0] + 1
+    MLData['STAGE'] = pd.factorize(MLData.STAGE)[0] + 1
+
+    trn, val, test = np.split(MLData, [int(0.8*len(MLData)), int(0.9*len(MLData))], axis = 0)
     trn_independent = trn.drop('N1', axis = 1)
     val_independent = val.drop('N1', axis = 1)
     test_independent = test.drop('N1', axis = 1)
@@ -50,11 +51,6 @@ def PrepareData(DataInPath):
 
 def DefineAndTrainNN(Dataset, MainPath):
     #Create the model
-    #Note - need to actually figure out the best settings here
-    #Changes should be number of layers, numer of neurons, activation function
-    #also need to look at learning rate, possibly add a kernal regularizer
-    #Later on the number of epochs
-    #Finally, decide if adam is really the best optimizer for this type of problem (I think it is?)
     normlayer = tf.keras.layers.Normalization()
     normlayer.adapt(Dataset['trn']['i'].to_numpy())
 
@@ -86,32 +82,52 @@ def DefineAndTrainNN(Dataset, MainPath):
                 mode = 'min',
                 min_delta = 0.0001,
                 cooldown = 25,
-                min_lr = 0.000000000000000000000001)
+                min_lr = 1E-10)
 
     history = model.fit(
                 Dataset['trn']['i'],
                 Dataset['trn']['d'],
                 batch_size = 400,
-                epochs = 500,
+                epochs = 2500,
                 validation_data = (Dataset['val']['i'], Dataset['val']['d']),
                 callbacks = [checkpoint_callback, learning_callback])
 
     model.load_weights(os.path.join(MainPath, 'Out/Checkpoints/checkpoint'))
     model.save(os.path.join(MainPath, 'Out/Models'))
-    print('\n-----------Best Training Data:-----------\n')
+    print('\n-----------Testing the Model:-----------\n')
     print(model.evaluate(Dataset['test']['i'], Dataset['test']['d']))
+    Dataset['test']['p'] = model.predict(Dataset['test']['i'])
+
+    return Dataset, history
 
 
-#def PlotOutputs():
-    #Plot the output of the final best-fit model to see how good of a model it was
-    #Don't necessarily need to do this as the R^2 does the same thing, but visualizations are always nice
+def PlotOutputs(history, Dataset):
+    #Plot the loss over time
+    plt.plot(history.history['loss'], label='Training Loss')
+    plt.plot(history.history['val_loss'], label='Validation Loss')
+    plt.ylim([0, 100])
+    plt.xlabel('Epoch')
+    plt.ylabel('Error')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+    plt.close()
 
-#Actually run the program
+    #Plot predicted versus actual values
+    plt.scatter(Dataset['test']['d'], Dataset['test']['p'], c = 'r', s = 4, label = 'Test Data')
+    plt.xlabel('Actual Value')
+    plt.ylabel('Predicted Value')
+    plt.show()
+    plt.close()
+
+
+###########################################################################################################################################
+#                                                             RUN THE NEURAL NET
+###########################################################################################################################################
+
 MainPath = pathlib.Path(__file__).parent.parent.resolve()
 DataPath = 'C:/Users/Zayn.Roohi/Documents/OASIS/TestDataLarge.csv' #takeoff_distance_A320_A330_A340.csv'
 
 Dataset = PrepareData(DataPath)
-DefineAndTrainNN(Dataset, MainPath)
-
-#Simple  string data structures: https://www.tensorflow.org/tutorials/keras/regression
-#Complex string data structures: https://www.tensorflow.org/tutorials/structured_data/preprocessing_layers
+Dataset, history = DefineAndTrainNN(Dataset, MainPath)
+PlotOutputs(history, Dataset)
