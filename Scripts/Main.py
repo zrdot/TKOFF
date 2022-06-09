@@ -88,7 +88,7 @@ def DefineAndTrainNN(Dataset, MainPath):
                 Dataset['trn']['i'],
                 Dataset['trn']['d'],
                 batch_size = 400,
-                epochs = 2500,
+                epochs = 500,
                 validation_data = (Dataset['val']['i'], Dataset['val']['d']),
                 callbacks = [checkpoint_callback, learning_callback])
 
