@@ -2,15 +2,18 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf
 import tensorflow_addons as tfa
-import pathlib, os
+import os
 import matplotlib.pyplot as plt
+
 
 def PrepareData(DataInPath, viz):
     RawData = pd.read_csv(DataInPath)
     LiftoffData = RawData[RawData['LIFTOFF'] == 1]
+    LiftoffData = LiftoffData.set_index('FLIGHT_ID')
+
     #Change to make: Instead of dropping data, import only the columns we need
     #This will be a bit difficult as sometimes columns have the same name
-    MLData = LiftoffData.drop(['TIME_OFFSET', 'FLIGHT_ID', 'FLIGHT_ID.1', 'STATED_SEGMENT_START_OF_TAKEOFF', 'APT_AIRCRAFT_RUNWAY_STAGE',
+    MLData = LiftoffData.drop(['TIME_OFFSET', 'FLIGHT_ID.1', 'STATED_SEGMENT_START_OF_TAKEOFF', 'APT_AIRCRAFT_RUNWAY_STAGE',
                             'LIFTOFF', 'TIME_ON_GROUND_BEFORE_LIFTOFF_(SECONDS)', 'P64: Duration of Taxi Out (Minutes)',
                             'DURATION','SPEED_SOUND_START_EVENT', 'AFE_ALT', 'TAS_START_EVENT', 'P64: True Airspeed at Liftoff (knots)',
                             'GS_SEGMENT', 'TAS_SEGMENT', 'MACH_NUMBER_SEGMENT', 'LAT', 'LON', 'DISTANCE_START_EVENT', 'DISTANCE_FROM_RUNWAY_END_AT_DETECTED_LIFTOFF',
@@ -29,7 +32,7 @@ def PrepareData(DataInPath, viz):
     MLData = MLData.dropna()
     MLData = MLData.sample(frac = 1, replace = False)
 
-    StringDataset = MLData
+    StringDataset = MLData.copy()
 
     MLData['AIRPORT'] = pd.factorize(MLData.AIRPORT)[0] + 1
     MLData['AIRCRAFT_TYPE'] = pd.factorize(MLData.AIRCRAFT_TYPE)[0] + 1
@@ -100,12 +103,12 @@ def DefineAndTrainNN(Dataset, MainPath):
                 callbacks = [checkpoint_callback, learning_callback])
 
     model.load_weights(os.path.join(MainPath, 'Out/Throttle Predictions/Checkpoints/checkpoint'))
-    model.save(os.path.join(MainPath, 'Out/Throttle Predictions/Models'))
+    model.save(os.path.join(MainPath, 'Out/Throttle Predictions/Models/'))
     print('\n-----------Testing the Model:-----------\n')
     print(model.evaluate(Dataset['test']['i'], Dataset['test']['d']))
     Dataset['test']['p'] = model.predict(Dataset['test']['i'])
 
-    return Dataset, history
+    return Dataset, history, model
 
 
 def PlotOutputs(MainPath, history, Dataset):
@@ -126,15 +129,3 @@ def PlotOutputs(MainPath, history, Dataset):
     plt.ylabel('Predicted Value')
     plt.savefig(os.path.join(MainPath, 'Out/Throttle Predictions/Figures/Actual_Predicted.jpg'), dpi = 600)
     plt.close()
-
-
-###########################################################################################################################################
-#                                                             RUN THE NEURAL NET
-###########################################################################################################################################
-
-MainPath = pathlib.Path(__file__).parent.parent.resolve()
-DataPath = 'C:/Users/Zayn.Roohi/Documents/OASIS/takeoff_distance_A320_A330_A340.csv'
-
-Dataset = PrepareData(DataPath, False)
-Dataset, history = DefineAndTrainNN(Dataset, MainPath)
-PlotOutputs(MainPath, history, Dataset)
