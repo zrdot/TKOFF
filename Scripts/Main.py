@@ -19,7 +19,8 @@ def CreateNewModel(DataPath):
     Predicted = pd.DataFrame(Dataset['p'], index = Dataset['i'].index, columns = ['PREDICTED_N1'])
     Actual = pd.DataFrame(Dataset['d'], index = Dataset['d'].index, columns = ['N1'])
     Predicted['ERROR'] = abs((Actual.N1 - Predicted.PREDICTED_N1) / Actual.N1 * 100)
-    print("\nMaximum Error: ", Predicted.ERROR.max(), "\n")
+    Predicted['ABSOLUTE_ERROR'] = abs(Actual.N1 - Predicted.PREDICTED_N1)
+    print("\nMaximum Error: ", Predicted.ERROR.max(), "Percent\n")
 
     FinalDataset = pd.concat([Dataset_with_strings, Predicted, Actual], axis=1)
     FinalDataset.to_csv(os.path.join(MainPath, 'Out/Visualizations/Data Out.csv'))
@@ -35,7 +36,8 @@ def RunExistingModel(DataPath):
     Predicted = pd.DataFrame(Dataset['p'], index = Dataset['i'].index, columns = ['PREDICTED_N1'])
     Actual = pd.DataFrame(Dataset['d'], index = Dataset['d'].index, columns = ['N1'])
     Predicted['ERROR'] = abs((Actual.N1 - Predicted.PREDICTED_N1) / Actual.N1 * 100)
-    print("\nMaximum Error: ", Predicted.ERROR.max(), "\n")
+    Predicted['ABSOLUTE_ERROR'] = abs(Actual.N1 - Predicted.PREDICTED_N1)
+    print("\nMaximum Error: ", Predicted.ERROR.max(), "Percent\n")
 
     FinalDataset = pd.concat([Dataset_with_strings, Predicted, Actual], axis=1)
     FinalDataset.to_csv(os.path.join(MainPath, 'Out/Visualizations/Data Out.csv'))
@@ -62,17 +64,62 @@ def CreateVisualizations(FinalDataset):
                         opacity = alt.condition(SelectionAP, alt.value(1), alt.value(0.01))
                 ).add_selection(SelectionAP).interactive()
 
-    chartErrorAP = alt.Chart(FinalDataset).mark_bar().encode(
-                        x = alt.X('AIRPORT', title='Airport'),
-                        y = alt.Y('ERROR', title='Error'),
-                        color = alt.Color('AIRPORT', title = 'AIRPORT'),
-                        tooltip = [alt.Tooltip('AIRPORT', title = "Airport"), alt.Tooltip('ERROR', title = "Percent Error", format=",.2f")])
+    UniqueAirports = FinalDataset.AIRPORT.unique()
+    UniqueAircraft = FinalDataset.AIRCRAFT_TYPE.unique()
+    AirportError =  {'Airport'  : [], 'Absolute Error' : [], 'Average Error' : [], 'Maximum Error' : []}
+    AircraftError = {'Aircraft' : [], 'Absolute Error' : [], 'Average Error' : [], 'Maximum Error' : []}
 
-    chartErrorAC = alt.Chart(FinalDataset).mark_bar().encode(
-                        x = alt.X('AIRCRAFT_TYPE', title='Aircraft'),
-                        y = alt.Y('ERROR', title='Error'),
-                        color = alt.Color('AIRCRAFT_TYPE', title = 'AIRCRAFT_TYPE'),
-                        tooltip = [alt.Tooltip('AIRCRAFT_TYPE', title = "Aircraft"), alt.Tooltip('ERROR', title = "Percent Error", format=",.2f")])
+    for airport in UniqueAirports:
+        AirportError['Airport'].append(airport)
+        AirportError['Absolute Error'].append(FinalDataset.loc[FinalDataset['AIRPORT'] == airport, 'ABSOLUTE_ERROR'].sum())
+        AirportError['Average Error'].append(FinalDataset.loc[FinalDataset['AIRPORT'] == airport, 'ABSOLUTE_ERROR'].sum() / FinalDataset['AIRPORT'].value_counts()[airport])
+        AirportError['Maximum Error'].append(FinalDataset.loc[FinalDataset['AIRPORT'] == airport, 'ABSOLUTE_ERROR'].max())
+
+
+    for aircraft in UniqueAircraft:
+        AircraftError['Aircraft'].append(aircraft)
+        AircraftError['Absolute Error'].append(FinalDataset.loc[FinalDataset['AIRCRAFT_TYPE'] == aircraft, 'ABSOLUTE_ERROR'].sum())
+        AircraftError['Average Error'].append(FinalDataset.loc[FinalDataset['AIRCRAFT_TYPE'] == aircraft, 'ABSOLUTE_ERROR'].sum() / FinalDataset['AIRCRAFT_TYPE'].value_counts()[aircraft])
+        AircraftError['Maximum Error'].append(FinalDataset.loc[FinalDataset['AIRCRAFT_TYPE'] == aircraft, 'ABSOLUTE_ERROR'].max())
+
+    AirportError = pd.DataFrame.from_dict(AirportError)
+    AircraftError = pd.DataFrame.from_dict(AircraftError)
+
+    chartErrorAP1 = alt.Chart(AirportError).mark_bar().encode(
+                        x = alt.X('Airport', title='Airport'),
+                        y = alt.Y('Absolute Error', title='Sum of Absolute Error'),
+                        color = alt.Color('Airport', title = 'Airport'),
+                        tooltip = [alt.Tooltip('Airport', title = "Airport"), alt.Tooltip('Absolute Error', title = "Absolute Error", format=",.2f"), alt.Tooltip('Average Error', title = "Average Error", format=",.2f"), alt.Tooltip('Maximum Error', title = "Maximum Error", format=",.2f")])
+    chartErrorAP2 = alt.Chart(AirportError).mark_bar().encode(
+                        x = alt.X('Airport', title='Airport'),
+                        y = alt.Y('Average Error', title='Average Absolute Error'),
+                        color = alt.Color('Airport', title = 'Airport'),
+                        tooltip = [alt.Tooltip('Airport', title = "Airport"), alt.Tooltip('Absolute Error', title = "Absolute Error", format=",.2f"), alt.Tooltip('Average Error', title = "Average Error", format=",.2f"), alt.Tooltip('Maximum Error', title = "Maximum Error", format=",.2f")])
+    chartErrorAP3 = alt.Chart(AirportError).mark_bar().encode(
+                        x = alt.X('Airport', title='Airport'),
+                        y = alt.Y('Maximum Error', title='Maximum Absolute Error'),
+                        color = alt.Color('Airport', title = 'Airport'),
+                        tooltip = [alt.Tooltip('Airport', title = "Airport"), alt.Tooltip('Absolute Error', title = "Absolute Error", format=",.2f"), alt.Tooltip('Average Error', title = "Average Error", format=",.2f"), alt.Tooltip('Maximum Error', title = "Maximum Error", format=",.2f")])
+
+    chartErrorAP = alt.hconcat(chartErrorAP1, chartErrorAP2, chartErrorAP3)
+
+    chartErrorAC1 = alt.Chart(AircraftError).mark_bar().encode(
+                        x = alt.X('Aircraft', title='Aircraft'),
+                        y = alt.Y('Absolute Error', title='Sum of Absolute Error'),
+                        color = alt.Color('Aircraft', title = 'Aircraft'),
+                        tooltip = [alt.Tooltip('Aircraft', title = "Aircraft"), alt.Tooltip('Absolute Error', title = "Absolute Error", format=",.2f"), alt.Tooltip('Average Error', title = "Average Error", format=",.2f"), alt.Tooltip('Maximum Error', title = "Maximum Error", format=",.2f")])
+    chartErrorAC2 = alt.Chart(AircraftError).mark_bar().encode(
+                        x = alt.X('Aircraft', title='Aircraft'),
+                        y = alt.Y('Average Error', title='Average Absolute Error'),
+                        color = alt.Color('Aircraft', title = 'Aircraft'),
+                        tooltip = [alt.Tooltip('Aircraft', title = "Aircraft"), alt.Tooltip('Absolute Error', title = "Absolute Error", format=",.2f"), alt.Tooltip('Average Error', title = "Average Error", format=",.2f"), alt.Tooltip('Maximum Error', title = "Maximum Error", format=",.2f")])
+    chartErrorAC3 = alt.Chart(AircraftError).mark_bar().encode(
+                        x = alt.X('Aircraft', title='Aircraft'),
+                        y = alt.Y('Maximum Error', title='Maximum Absolute Error'),
+                        color = alt.Color('Aircraft', title = 'Aircraft'),
+                        tooltip = [alt.Tooltip('Aircraft', title = "Aircraft"), alt.Tooltip('Absolute Error', title = "Absolute Error", format=",.2f"), alt.Tooltip('Average Error', title = "Average Error", format=",.2f"), alt.Tooltip('Maximum Error', title = "Maximum Error", format=",.2f")])
+
+    chartErrorAC = alt.hconcat(chartErrorAC1, chartErrorAC2, chartErrorAC3)
 
     chartAP.save(os.path.join(MainPath, 'Out/Visualizations/Airport Chart.html'))
     chartAC.save(os.path.join(MainPath, 'Out/Visualizations/Aircraft Chart.html'))
@@ -89,5 +136,5 @@ def CreateVisualizations(FinalDataset):
 DataPath = 'C:/Users/Zayn.Roohi/Documents/OASIS/takeoff_distance_A320_A330_A340.csv'
 
 #Call the different functions
-CreateNewModel(DataPath)
-#RunExistingModel(DataPath)
+#CreateNewModel(DataPath)
+RunExistingModel(DataPath)
