@@ -2,15 +2,17 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf
 import tensorflow_addons as tfa
-import pathlib, os
+import os
 import matplotlib.pyplot as plt
 
-def PrepareData(DataInPath):
+def PrepareData(DataInPath, viz):
     RawData = pd.read_csv(DataInPath)
     LiftoffData = RawData[RawData['LIFTOFF'] == 1]
+    LiftoffData = LiftoffData.set_index('FLIGHT_ID')
+    
     #Change to make: Instead of dropping data, import only the columns we need
     #This will be a bit difficult as sometimes columns have the same name
-    MLData = LiftoffData.drop(['TIME_OFFSET', 'FLIGHT_ID', 'FLIGHT_ID.1', 'STATED_SEGMENT_START_OF_TAKEOFF', 'APT_AIRCRAFT_RUNWAY_STAGE',
+    MLData = LiftoffData.drop(['TIME_OFFSET', 'FLIGHT_ID.1', 'STATED_SEGMENT_START_OF_TAKEOFF', 'APT_AIRCRAFT_RUNWAY_STAGE',
                             'LIFTOFF', 'TIME_ON_GROUND_BEFORE_LIFTOFF_(SECONDS)', 'P64: Duration of Taxi Out (Minutes)',
                             'DURATION','SPEED_SOUND_START_EVENT', 'AFE_ALT', 'TAS_START_EVENT', 'P64: True Airspeed at Liftoff (knots)',
                             'GS_SEGMENT', 'TAS_SEGMENT', 'MACH_NUMBER_SEGMENT', 'LAT', 'LON', 'DISTANCE_START_EVENT', 'DISTANCE_FROM_RUNWAY_END_AT_DETECTED_LIFTOFF',
@@ -29,24 +31,32 @@ def PrepareData(DataInPath):
     MLData = MLData.dropna()
     MLData = MLData.sample(frac = 1, replace = False)
 
+    StringDataset = MLData.copy()
+
     MLData['AIRPORT'] = pd.factorize(MLData.AIRPORT)[0] + 1
     MLData['AIRCRAFT_TYPE'] = pd.factorize(MLData.AIRCRAFT_TYPE)[0] + 1
     MLData['RUNWAY'] = pd.factorize(MLData.RUNWAY)[0] + 1
     MLData['STAGE'] = pd.factorize(MLData.STAGE)[0] + 1
 
-    trn, val, test = np.split(MLData, [int(0.8*len(MLData)), int(0.9*len(MLData))], axis = 0)
-    trn_independent = trn.drop('DISTANCE_FROM_RUNWAY_END', axis = 1)
-    val_independent = val.drop('DISTANCE_FROM_RUNWAY_END', axis = 1)
-    test_independent = test.drop('DISTANCE_FROM_RUNWAY_END', axis = 1)
-    trn_dependent = trn.DISTANCE_FROM_RUNWAY_END
-    val_dependent = val.DISTANCE_FROM_RUNWAY_END
-    test_dependent = test.DISTANCE_FROM_RUNWAY_END
+    if viz == False:
+        trn, val, test = np.split(MLData, [int(0.8*len(MLData)), int(0.9*len(MLData))], axis = 0)
+        trn_independent = trn.drop('DISTANCE_FROM_RUNWAY_END', axis = 1)
+        val_independent = val.drop('DISTANCE_FROM_RUNWAY_END', axis = 1)
+        test_independent = test.drop('DISTANCE_FROM_RUNWAY_END', axis = 1)
+        trn_dependent = trn.DISTANCE_FROM_RUNWAY_END
+        val_dependent = val.DISTANCE_FROM_RUNWAY_END
+        test_dependent = test.DISTANCE_FROM_RUNWAY_END
 
-    FinalDataset = {'trn' :  {'i' : trn_independent,  'd' : trn_dependent},
-                    'val' :  {'i' : val_independent,  'd' : val_dependent},
-                    'test' : {'i' : test_independent, 'd' : test_dependent}}
+        FinalDataset = {'trn' :  {'i' : trn_independent,  'd' : trn_dependent},
+                        'val' :  {'i' : val_independent,  'd' : val_dependent},
+                        'test' : {'i' : test_independent, 'd' : test_dependent}}
 
-    return FinalDataset
+        return FinalDataset
+
+    if viz == True:
+        Dataset = {'i' : MLData.drop('DISTANCE_FROM_RUNWAY_END', axis = 1), 'd' : MLData.DISTANCE_FROM_RUNWAY_END}
+        return Dataset, StringDataset.reindex(Dataset['i'].columns, axis=1)
+
 
 def DefineAndTrainNN(Dataset, MainPath):
     #Create the model
@@ -58,8 +68,6 @@ def DefineAndTrainNN(Dataset, MainPath):
                 tf.keras.layers.Dense(units = 8, activation = 'relu'),
                 tf.keras.layers.Dense(units = 16, activation = 'relu'),
                 tf.keras.layers.Dense(units = 32, activation = 'relu'),
-                tf.keras.layers.Dense(units = 16, activation = 'relu'),
-                tf.keras.layers.Dense(units = 8, activation = 'relu'),
                 tf.keras.layers.Dense(units = 1, activation = 'linear')])
 
     model.compile(
@@ -94,12 +102,12 @@ def DefineAndTrainNN(Dataset, MainPath):
                 callbacks = [checkpoint_callback, learning_callback])
 
     model.load_weights(os.path.join(MainPath, 'Out/Takeoff Distance Predictions/Checkpoints/checkpoint'))
-    model.save(os.path.join(MainPath, 'Out/Takeoff Distance Predictions/Models'))
+    model.save(os.path.join(MainPath, 'Out/Takeoff Distance Predictions/Models/'))
     print('\n-----------Testing the Model:-----------\n')
     print(model.evaluate(Dataset['test']['i'], Dataset['test']['d']))
     Dataset['test']['p'] = model.predict(Dataset['test']['i'])
 
-    return Dataset, history
+    return Dataset, history, model
 
 
 def PlotOutputs(MainPath, history, Dataset):
@@ -120,15 +128,3 @@ def PlotOutputs(MainPath, history, Dataset):
     plt.ylabel('Predicted Value')
     plt.savefig(os.path.join(MainPath, 'Out/Takeoff Distance Predictions/Figures/Actual_Predicted.jpg'), dpi = 600)
     plt.close()
-
-
-###########################################################################################################################################
-#                                                             RUN THE NEURAL NET
-###########################################################################################################################################
-
-MainPath = pathlib.Path(__file__).parent.parent.resolve()
-DataPath = 'C:/Users/Zayn.Roohi/Documents/OASIS/takeoff_distance_A320_A330_A340.csv'
-
-Dataset = PrepareData(DataPath)
-Dataset, history = DefineAndTrainNN(Dataset, MainPath)
-PlotOutputs(MainPath, history, Dataset)

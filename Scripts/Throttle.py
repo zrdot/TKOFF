@@ -5,7 +5,6 @@ import tensorflow_addons as tfa
 import os
 import matplotlib.pyplot as plt
 
-
 def PrepareData(DataInPath, viz):
     RawData = pd.read_csv(DataInPath)
     LiftoffData = RawData[RawData['LIFTOFF'] == 1]

@@ -5,62 +5,119 @@ import tensorflow_addons as tfa
 import pathlib, os
 import matplotlib.pyplot as plt
 import Throttle as trl
+import Takeoff_Distance as tkd
 import altair as alt
 
 MainPath = pathlib.Path(__file__).parent.parent.resolve()
 
-def CreateNewModel(DataPath):
-    Dataset = trl.PrepareData(DataPath, False)
-    Dataset, history, model = trl.DefineAndTrainNN(Dataset, MainPath)
-    trl.PlotOutputs(MainPath, history, Dataset)
-    Dataset, Dataset_with_strings = trl.PrepareData(DataPath, True)
+def CreateNewModel(DataPath, ScriptToRun):
+    if ScriptToRun == 'Throttle':
+        Dataset = trl.PrepareData(DataPath, False)
+        Dataset, history, model = trl.DefineAndTrainNN(Dataset, MainPath)
 
-    Dataset['p'] = model.predict(Dataset['i'])
-    Predicted = pd.DataFrame(Dataset['p'], index = Dataset['i'].index, columns = ['PREDICTED_N1'])
-    Actual = pd.DataFrame(Dataset['d'], index = Dataset['d'].index, columns = ['N1'])
-    Predicted['ERROR'] = abs((Actual.N1 - Predicted.PREDICTED_N1) / Actual.N1 * 100)
-    Predicted['ABSOLUTE_ERROR'] = abs(Actual.N1 - Predicted.PREDICTED_N1)
-    print("\nMaximum Error: ", Predicted.ERROR.max(), "Percent\n")
+        trl.PlotOutputs(MainPath, history, Dataset)
+        Dataset, Dataset_with_strings = trl.PrepareData(DataPath, True)
 
-    FinalDataset = pd.concat([Dataset_with_strings, Predicted, Actual], axis=1)
-    FinalDataset.to_csv(os.path.join(MainPath, 'Out/Visualizations/Data Out.csv'))
+        Dataset['p'] = model.predict(Dataset['i'])
+        Predicted = pd.DataFrame(Dataset['p'], index = Dataset['i'].index, columns = ['PREDICTED_N1'])
+        Actual = pd.DataFrame(Dataset['d'], index = Dataset['d'].index, columns = ['N1'])
+        Predicted['ERROR'] = abs((Actual.N1 - Predicted.PREDICTED_N1) / Actual.N1 * 100)
+        Predicted['ABSOLUTE_ERROR'] = abs(Actual.N1 - Predicted.PREDICTED_N1)
+        print("\nMaximum Error: ", Predicted.ERROR.max(), "Percent\n")
 
-    CreateVisualizations(FinalDataset)    
+        FinalDataset = pd.concat([Dataset_with_strings, Predicted, Actual], axis=1)
+        FinalDataset.to_csv(os.path.join(MainPath, 'Out/Visualizations/Throttle Data Out.csv'))
 
-def RunExistingModel(DataPath):
-    ModelPath = os.path.join(MainPath, 'Out/Throttle Predictions/Models/')
-    Dataset, Dataset_with_strings = trl.PrepareData(DataPath, True)
-    model = tf.keras.models.load_model(ModelPath)
+        CreateVisualizations(FinalDataset, ScriptToRun)
 
-    Dataset['p'] = model.predict(Dataset['i'])
-    Predicted = pd.DataFrame(Dataset['p'], index = Dataset['i'].index, columns = ['PREDICTED_N1'])
-    Actual = pd.DataFrame(Dataset['d'], index = Dataset['d'].index, columns = ['N1'])
-    Predicted['ERROR'] = abs((Actual.N1 - Predicted.PREDICTED_N1) / Actual.N1 * 100)
-    Predicted['ABSOLUTE_ERROR'] = abs(Actual.N1 - Predicted.PREDICTED_N1)
-    print("\nMaximum Error: ", Predicted.ERROR.max(), "Percent\n")
+    elif ScriptToRun == 'Takeoff Distance':
+        Dataset = tkd.PrepareData(DataPath, False)
+        Dataset, history, model = trl.DefineAndTrainNN(Dataset, MainPath)
 
-    FinalDataset = pd.concat([Dataset_with_strings, Predicted, Actual], axis=1)
-    FinalDataset.to_csv(os.path.join(MainPath, 'Out/Visualizations/Data Out.csv'))
+        tkd.PlotOutputs(MainPath, history, Dataset)
+        Dataset, Dataset_with_strings = tkd.PrepareData(DataPath, True)
 
-    CreateVisualizations(FinalDataset)
+        Dataset['p'] = model.predict(Dataset['i'])
+        Predicted = pd.DataFrame(Dataset['p'], index = Dataset['i'].index, columns = ['PREDICTED_DISTANCE_FROM_RUNWAY_END'])
+        Actual = pd.DataFrame(Dataset['d'], index = Dataset['d'].index, columns = ['DISTANCE_FROM_RUNWAY_END'])
+        Predicted['ERROR'] = abs((Actual.DISTANCE_FROM_RUNWAY_END - Predicted.PREDICTED_DISTANCE_FROM_RUNWAY_END) / Actual.DISTANCE_FROM_RUNWAY_END * 100)
+        Predicted['ABSOLUTE_ERROR'] = abs(Actual.DISTANCE_FROM_RUNWAY_END - Predicted.PREDICTED_DISTANCE_FROM_RUNWAY_END)
+        print("\nMaximum Error: ", Predicted.ERROR.max(), "Percent\n")
+
+        FinalDataset = pd.concat([Dataset_with_strings, Predicted, Actual], axis=1)
+        FinalDataset.to_csv(os.path.join(MainPath, 'Out/Visualizations/Takeoff Distance Data Out.csv'))
+
+        CreateVisualizations(FinalDataset, ScriptToRun)
+    else:
+        print('Please enter either \'Throttle\' or \'Takeoff Distance\'')
 
 
-def CreateVisualizations(FinalDataset):
+def RunExistingModel(DataPath, ScriptToRun):
+    if ScriptToRun == 'Throttle':
+        ModelPath = os.path.join(MainPath, 'Out/Throttle Predictions/Models/')
+        Dataset, Dataset_with_strings = trl.PrepareData(DataPath, True)
+        model = tf.keras.models.load_model(ModelPath)
+
+        Dataset['p'] = model.predict(Dataset['i'])
+        Predicted = pd.DataFrame(Dataset['p'], index = Dataset['i'].index, columns = ['PREDICTED_N1'])
+        Actual = pd.DataFrame(Dataset['d'], index = Dataset['d'].index, columns = ['N1'])
+        Predicted['ERROR'] = abs((Actual.N1 - Predicted.PREDICTED_N1) / Actual.N1 * 100)
+        Predicted['ABSOLUTE_ERROR'] = abs(Actual.N1 - Predicted.PREDICTED_N1)
+        print("\nMaximum Error: ", Predicted.ERROR.max(), "Percent\n")
+
+        FinalDataset = pd.concat([Dataset_with_strings, Predicted, Actual], axis=1)
+        FinalDataset.to_csv(os.path.join(MainPath, 'Out/Visualizations/Throttle Data Out.csv'))
+
+        CreateVisualizations(FinalDataset, ScriptToRun)
+
+    elif ScriptToRun == 'Takeoff Distance':
+        ModelPath = os.path.join(MainPath, 'Out/Takeoff Distance Predictions/Models/')
+        Dataset, Dataset_with_strings = tkd.PrepareData(DataPath, True)
+        model = tf.keras.models.load_model(ModelPath)
+
+        Dataset['p'] = model.predict(Dataset['i'])
+        Predicted = pd.DataFrame(Dataset['p'], index = Dataset['i'].index, columns = ['PREDICTED_DISTANCE_FROM_RUNWAY_END'])
+        Actual = pd.DataFrame(Dataset['d'], index = Dataset['d'].index, columns = ['DISTANCE_FROM_RUNWAY_END'])
+        Predicted['ERROR'] = abs((Actual.DISTANCE_FROM_RUNWAY_END - Predicted.PREDICTED_DISTANCE_FROM_RUNWAY_END) / Actual.DISTANCE_FROM_RUNWAY_END * 100)
+        Predicted['ABSOLUTE_ERROR'] = abs(Actual.N1 - Predicted.PREDICTED_N1)
+        print("\nMaximum Error: ", Predicted.ERROR.max(), "Percent\n")
+
+        FinalDataset = pd.concat([Dataset_with_strings, Predicted, Actual], axis=1)
+        FinalDataset.to_csv(os.path.join(MainPath, 'Out/Visualizations/Takeoff Distance Data Out.csv'))
+
+        CreateVisualizations(FinalDataset, ScriptToRun)
+
+    else:
+        print('Please enter either \'Throttle\' or \'Takeoff Distance\'')
+    
+
+def CreateVisualizations(FinalDataset, ScriptToRun):
+    if ScriptToRun == 'Throttle':
+        x = 'N1'
+        y = 'PREDICTED_N1'
+        p = ' Throttle '
+        d = [75, 105]
+    elif ScriptToRun == 'Takeoff Distance':
+        x = 'DISTANCE_FROM_RUNWAY_END'
+        y = 'PREDICTED_DISTANCE_FROM_RUNWAY_END'
+        p = ' Takeoff Distance '
+        d = [0, 10000]
+
     SelectionAC = alt.selection_multi(fields = ['AIRCRAFT_TYPE'], bind = 'legend')
     chartAC = alt.Chart(FinalDataset).mark_circle(size = 15).encode(
-                        x = alt.X('N1', title='Actual Value', scale = alt.Scale(domain=[75, 105])),
-                        y = alt.Y('PREDICTED_N1', title='Predicted Value', scale = alt.Scale(domain=[75, 105])),
+                        x = alt.X(x, title='Actual Value', scale = alt.Scale(domain = d)),
+                        y = alt.Y(y, title='Predicted Value', scale = alt.Scale(domain = d)),
                         color = alt.Color('AIRCRAFT_TYPE', title = 'Aircraft Type'),
-                        tooltip = [alt.Tooltip('AIRCRAFT_TYPE', title = "Aircraft"), alt.Tooltip('AIRPORT', title = "Airport"), alt.Tooltip('N1', title = "Throttle Setting", format=",.2f"), alt.Tooltip('PREDICTED_N1', title = "Predicted Setting", format=",.2f"), alt.Tooltip('ERROR', title = "Percent Error", format=",.2f")],
+                        tooltip = [alt.Tooltip('AIRCRAFT_TYPE', title = "Aircraft"), alt.Tooltip('AIRPORT', title = "Airport"), alt.Tooltip(x, title = "Throttle Setting", format=",.2f"), alt.Tooltip(y, title = "Predicted Setting", format=",.2f"), alt.Tooltip('ERROR', title = "Percent Error", format=",.2f")],
                         opacity = alt.condition(SelectionAC, alt.value(1), alt.value(0.01))
                 ).add_selection(SelectionAC).interactive()
 
     SelectionAP = alt.selection_multi(fields = ['AIRPORT'], bind = 'legend')
     chartAP = alt.Chart(FinalDataset).mark_circle(size = 15).encode(
-                        x = alt.X('N1', title='Actual Value', scale = alt.Scale(domain=[75, 105])),
-                        y = alt.Y('PREDICTED_N1', title='Predicted Value', scale = alt.Scale(domain=[75, 105])),
+                        x = alt.X(x, title='Actual Value', scale = alt.Scale(domain = d)),
+                        y = alt.Y(y, title='Predicted Value', scale = alt.Scale(domain = d)),
                         color = alt.Color('AIRPORT', title = 'AIRPORT'),
-                        tooltip = [alt.Tooltip('AIRCRAFT_TYPE', title = "Aircraft"), alt.Tooltip('AIRPORT', title = "Airport"), alt.Tooltip('N1', title = "Throttle Setting", format=",.2f"), alt.Tooltip('PREDICTED_N1', title = "Predicted Setting", format=",.2f"), alt.Tooltip('ERROR', title = "Percent Error", format=",.2f")],
+                        tooltip = [alt.Tooltip('AIRCRAFT_TYPE', title = "Aircraft"), alt.Tooltip('AIRPORT', title = "Airport"), alt.Tooltip(x, title = "Throttle Setting", format=",.2f"), alt.Tooltip(y, title = "Predicted Setting", format=",.2f"), alt.Tooltip('ERROR', title = "Percent Error", format=",.2f")],
                         opacity = alt.condition(SelectionAP, alt.value(1), alt.value(0.01))
                 ).add_selection(SelectionAP).interactive()
 
@@ -121,10 +178,10 @@ def CreateVisualizations(FinalDataset):
 
     chartErrorAC = alt.hconcat(chartErrorAC1, chartErrorAC2, chartErrorAC3)
 
-    chartAP.save(os.path.join(MainPath, 'Out/Visualizations/Airport Chart.html'))
-    chartAC.save(os.path.join(MainPath, 'Out/Visualizations/Aircraft Chart.html'))
-    chartErrorAP.save(os.path.join(MainPath, 'Out/Visualizations/Airport Error.html'))
-    chartErrorAC.save(os.path.join(MainPath, 'Out/Visualizations/Aircraft Error.html'))
+    chartAP.save(os.path.join(MainPath, 'Out/Visualizations/' + p + 'Airport Chart.html'))
+    chartAC.save(os.path.join(MainPath, 'Out/Visualizations/' + p + 'Aircraft Chart.html'))
+    chartErrorAP.save(os.path.join(MainPath, 'Out/Visualizations/' + p + 'Airport Error.html'))
+    chartErrorAC.save(os.path.join(MainPath, 'Out/Visualizations/' + p + 'Aircraft Error.html'))
     chartAP.show()
     chartAC.show()
     chartErrorAP.show()
@@ -135,6 +192,8 @@ def CreateVisualizations(FinalDataset):
 ###########################################################################################################################################
 DataPath = 'C:/Users/Zayn.Roohi/Documents/OASIS/takeoff_distance_A320_A330_A340.csv'
 
-#Call the different functions
-#CreateNewModel(DataPath)
-RunExistingModel(DataPath)
+#note that running an existing model DOES NOT WORK PROPERLY due to a glitch with TensorFlow
+#as of right now you must always go through the entire process of creating an entirely new script
+
+#RunExistingModel(DataPath, 'Throttle')
+CreateNewModel(DataPath, 'Takeoff Distance')
