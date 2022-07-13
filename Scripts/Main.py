@@ -25,6 +25,9 @@ def CreateNewModel(DataPath, ScriptToRun):
         Predicted['ABSOLUTE_ERROR'] = abs(Actual.N1 - Predicted.PREDICTED_N1)
         print("\nMaximum Error: ", Predicted.ERROR.max(), "Percent\n")
 
+        for layer in model.layers:
+            print(layer, layer.get_weights())
+
         FinalDataset = pd.concat([Dataset_with_strings, Predicted, Actual], axis=1)
         FinalDataset.to_csv(os.path.join(MainPath, 'Out/Visualizations/Throttle Data Out.csv'))
 
@@ -43,6 +46,9 @@ def CreateNewModel(DataPath, ScriptToRun):
         Predicted['ERROR'] = abs((Actual.DISTANCE_FROM_RUNWAY_END - Predicted.PREDICTED_DISTANCE_FROM_RUNWAY_END) / Actual.DISTANCE_FROM_RUNWAY_END * 100)
         Predicted['ABSOLUTE_ERROR'] = abs(Actual.DISTANCE_FROM_RUNWAY_END - Predicted.PREDICTED_DISTANCE_FROM_RUNWAY_END)
         print("\nMaximum Error: ", Predicted.ERROR.max(), "Percent\n")
+
+        for layer in model.layers:
+            print(layer, layer.get_weights())
 
         FinalDataset = pd.concat([Dataset_with_strings, Predicted, Actual], axis=1)
         FinalDataset.to_csv(os.path.join(MainPath, 'Out/Visualizations/Takeoff Distance Data Out.csv'))
@@ -65,6 +71,9 @@ def RunExistingModel(DataPath, ScriptToRun):
         Predicted['ABSOLUTE_ERROR'] = abs(Actual.N1 - Predicted.PREDICTED_N1)
         print("\nMaximum Error: ", Predicted.ERROR.max(), "Percent\n")
 
+        for layer in model.layers:
+            print(layer, layer.get_weights())
+
         FinalDataset = pd.concat([Dataset_with_strings, Predicted, Actual], axis=1)
         FinalDataset.to_csv(os.path.join(MainPath, 'Out/Visualizations/Throttle Data Out.csv'))
 
@@ -81,6 +90,9 @@ def RunExistingModel(DataPath, ScriptToRun):
         Predicted['ERROR'] = abs((Actual.DISTANCE_FROM_RUNWAY_END - Predicted.PREDICTED_DISTANCE_FROM_RUNWAY_END) / Actual.DISTANCE_FROM_RUNWAY_END * 100)
         Predicted['ABSOLUTE_ERROR'] = abs(Actual.N1 - Predicted.PREDICTED_N1)
         print("\nMaximum Error: ", Predicted.ERROR.max(), "Percent\n")
+
+        for layer in model.layers:
+            print(layer, layer.get_weights())
 
         FinalDataset = pd.concat([Dataset_with_strings, Predicted, Actual], axis=1)
         FinalDataset.to_csv(os.path.join(MainPath, 'Out/Visualizations/Takeoff Distance Data Out.csv'))
@@ -196,4 +208,4 @@ DataPath = 'C:/Users/Zayn.Roohi/Documents/OASIS/takeoff_distance_A320_A330_A340.
 #as of right now you must always go through the entire process of creating an entirely new script
 
 #RunExistingModel(DataPath, 'Throttle')
-CreateNewModel(DataPath, 'Takeoff Distance')
+CreateNewModel(DataPath, 'Throttle')

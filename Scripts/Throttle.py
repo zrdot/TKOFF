@@ -74,8 +74,7 @@ def DefineAndTrainNN(Dataset, MainPath):
                 optimizer = tf.keras.optimizers.Adam(learning_rate = 0.1),
                 loss = 'mse',
                 metrics = [tf.metrics.MeanSquaredError(), tf.keras.metrics.MeanAbsoluteError(), tfa.metrics.r_square.RSquare()])
-
-
+    
     #Train the model now
     checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
                 filepath = os.path.join(MainPath, 'Out/Throttle Predictions/Checkpoints/checkpoint'),
