@@ -1,12 +1,11 @@
+# In[1]:
 import pandas as pd
-import numpy as np
 import tensorflow as tf
-import tensorflow_addons as tfa
 import pathlib, os
-import matplotlib.pyplot as plt
 import Throttle as trl
 import Takeoff_Distance as tkd
 import altair as alt
+# In[1]:
 
 MainPath = pathlib.Path(__file__).parent.parent.resolve()
 
@@ -194,18 +193,22 @@ def CreateVisualizations(FinalDataset, ScriptToRun):
     chartAC.save(os.path.join(MainPath, 'Out/Visualizations/' + p + 'Aircraft Chart.html'))
     chartErrorAP.save(os.path.join(MainPath, 'Out/Visualizations/' + p + 'Airport Error.html'))
     chartErrorAC.save(os.path.join(MainPath, 'Out/Visualizations/' + p + 'Aircraft Error.html'))
-    chartAP.show()
-    chartAC.show()
-    chartErrorAP.show()
-    chartErrorAC.show()
+    # chartAP.show()
+    # chartAC.show()
+    # chartErrorAP.show()
+    # chartErrorAC.show()
 
 ###########################################################################################################################################
 #                                                 RUN THE PROGRAM
 ###########################################################################################################################################
-DataPath = 'C:/Users/Zayn.Roohi/Documents/OASIS/takeoff_distance_A320_A330_A340.csv'
-
+DataPath = 'C:\\Users\\Lyle.Tripp\\OneDrive - DOT OST\\BADA4_Reduced_Thrust_Sensor_Path_Noise_Comparison_main\\takeoff_distance_A320_A330_A340.csv' #sensitive data
+DataPath2 = 'C:\\Users\\Lyle.Tripp\\OneDrive - DOT OST\\BADA4_Reduced_Thrust_Sensor_Path_Noise_Comparison_main\\FDR_desensitized\\TKOFF\\takeoff_distance_A320_A330_A340_desensitized_schedule.csv' #desensitized data
 #note that running an existing model DOES NOT WORK PROPERLY due to a glitch with TensorFlow
 #as of right now you must always go through the entire process of creating an entirely new script
 
-#RunExistingModel(DataPath, 'Throttle')
-CreateNewModel(DataPath, 'Throttle')
+DataPaths = []
+DataPaths.append(DataPath)
+DataPaths.append(DataPath2)
+
+#RunExistingModel(DataPaths, 'Throttle')
+CreateNewModel(DataPaths, 'Throttle')

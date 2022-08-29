@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    .error {
+        color: red;
+    }
+  </style>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm//vega@5"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm//vega-lite@4.17.0"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm//vega-embed@6"></script>
+</head>
+<body>
+  <div id="vis"></div>
+  <script>
+    (function(vegaEmbed) {
+      var spec = {"config": {"view": {"continuousWidth": 400, "continuousHeight": 300}}, "hconcat": [{"mark": "bar", "encoding": {"color": {"field": "Airport", "title": "Airport", "type": "nominal"}, "tooltip": [{"field": "Airport", "title": "Airport", "type": "nominal"}, {"field": "Absolute Error", "format": ",.2f", "title": "Absolute Error", "type": "quantitative"}, {"field": "Average Error", "format": ",.2f", "title": "Average Error", "type": "quantitative"}, {"field": "Maximum Error", "format": ",.2f", "title": "Maximum Error", "type": "quantitative"}], "x": {"field": "Airport", "title": "Airport", "type": "nominal"}, "y": {"field": "Absolute Error", "title": "Sum of Absolute Error", "type": "quantitative"}}}, {"mark": "bar", "encoding": {"color": {"field": "Airport", "title": "Airport", "type": "nominal"}, "tooltip": [{"field": "Airport", "title": "Airport", "type": "nominal"}, {"field": "Absolute Error", "format": ",.2f", "title": "Absolute Error", "type": "quantitative"}, {"field": "Average Error", "format": ",.2f", "title": "Average Error", "type": "quantitative"}, {"field": "Maximum Error", "format": ",.2f", "title": "Maximum Error", "type": "quantitative"}], "x": {"field": "Airport", "title": "Airport", "type": "nominal"}, "y": {"field": "Average Error", "title": "Average Absolute Error", "type": "quantitative"}}}, {"mark": "bar", "encoding": {"color": {"field": "Airport", "title": "Airport", "type": "nominal"}, "tooltip": [{"field": "Airport", "title": "Airport", "type": "nominal"}, {"field": "Absolute Error", "format": ",.2f", "title": "Absolute Error", "type": "quantitative"}, {"field": "Average Error", "format": ",.2f", "title": "Average Error", "type": "quantitative"}, {"field": "Maximum Error", "format": ",.2f", "title": "Maximum Error", "type": "quantitative"}], "x": {"field": "Airport", "title": "Airport", "type": "nominal"}, "y": {"field": "Maximum Error", "title": "Maximum Absolute Error", "type": "quantitative"}}}], "data": {"name": "data-a1906aa08b07d1e6317bea801b170145"}, "$schema": "https://vega.github.io/schema/vega-lite/v4.17.0.json", "datasets": {"data-a1906aa08b07d1e6317bea801b170145": [{"Airport": "KJFK", "Absolute Error": 246.46826371875, "Average Error": 0.800221635450487, "Maximum Error": 3.1298141479492188}, {"Airport": "KLAX", "Absolute Error": 120.79059224951169, "Average Error": 0.9982693574339809, "Maximum Error": 8.305976867675781}, {"Airport": "LSGG", "Absolute Error": 556.4403839111328, "Average Error": 2.008810050220696, "Maximum Error": 8.777725219726562}, {"Airport": "LSZH", "Absolute Error": 2023.3703251811523, "Average Error": 1.1635252013692652, "Maximum Error": 9.513245128906249}, {"Airport": "EBBR", "Absolute Error": 37.631866455078125, "Average Error": 1.791993640718006, "Maximum Error": 5.6130828857421875}, {"Airport": "OMDB", "Absolute Error": 231.76985931396484, "Average Error": 1.1196611561061103, "Maximum Error": 14.98992919921875}, {"Airport": "OOMS", "Absolute Error": 103.05097961425781, "Average Error": 0.7926998431865986, "Maximum Error": 13.212295532226562}, {"Airport": "VABB", "Absolute Error": 80.13292694091797, "Average Error": 0.7284811540083451, "Maximum Error": 2.8107528686523438}, {"Airport": "EHAM", "Absolute Error": 130.34876251220703, "Average Error": 3.5229395273569466, "Maximum Error": 6.605171203613281}, {"Airport": "KBOS", "Absolute Error": 156.27259289599613, "Average Error": 1.1242632582445764, "Maximum Error": 4.118683361328124}, {"Airport": "LEBL", "Absolute Error": 115.07723236083984, "Average Error": 2.876930809020996, "Maximum Error": 6.918121337890625}, {"Airport": "LLBG", "Absolute Error": 343.0806096826172, "Average Error": 1.610707087711818, "Maximum Error": 12.433578491210938}, {"Airport": "CYUL", "Absolute Error": 100.92365214892578, "Average Error": 1.0623542331465872, "Maximum Error": 4.9740447998046875}, {"Airport": "KORD", "Absolute Error": 127.92881424902345, "Average Error": 1.1221825811317847, "Maximum Error": 3.48187255859375}, {"Airport": "KMIA", "Absolute Error": 113.52749320849608, "Average Error": 0.8666220855610388, "Maximum Error": 2.9972991943359375}, {"Airport": "EGLL", "Absolute Error": 427.46571350097656, "Average Error": 3.2383766174316406, "Maximum Error": 8.197303771972656}, {"Airport": "ESSA", "Absolute Error": 111.0677261352539, "Average Error": 2.2666882884745694, "Maximum Error": 6.303489685058594}, {"Airport": "HKJK", "Absolute Error": 19.828414916992188, "Average Error": 1.3218943277994792, "Maximum Error": 3.9250335693359375}, {"Airport": "LEMD", "Absolute Error": 91.39912414550781, "Average Error": 1.6321272168840681, "Maximum Error": 6.0948486328125}, {"Airport": "FKKD", "Absolute Error": 28.134971618652344, "Average Error": 1.7584357261657715, "Maximum Error": 5.4219970703125}, {"Airport": "KSFO", "Absolute Error": 44.645522071289065, "Average Error": 0.8117367649325284, "Maximum Error": 2.7797775268554688}, {"Airport": "FKYS", "Absolute Error": 27.463973999023438, "Average Error": 2.7463973999023437, "Maximum Error": 4.490547180175781}]}};
+      var embedOpt = {"mode": "vega-lite"};
+
+      function showError(el, error){
+          el.innerHTML = ('<div class="error" style="color:red;">'
+                          + '<p>JavaScript Error: ' + error.message + '</p>'
+                          + "<p>This usually means there's a typo in your chart specification. "
+                          + "See the javascript console for the full traceback.</p>"
+                          + '</div>');
+          throw error;
+      }
+      const el = document.getElementById('vis');
+      vegaEmbed("#vis", spec, embedOpt)
+        .catch(error => showError(el, error));
+    })(vegaEmbed);
+
+  </script>
+</body>
+</html>

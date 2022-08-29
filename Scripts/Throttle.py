@@ -1,33 +1,47 @@
 import pandas as pd
 import numpy as np
 import tensorflow as tf
-import tensorflow_addons as tfa
+# import tensorflow_addons as tfa
 import os
 import matplotlib.pyplot as plt
 
-def PrepareData(DataInPath, viz):
-    RawData = pd.read_csv(DataInPath)
-    LiftoffData = RawData[RawData['LIFTOFF'] == 1]
-    LiftoffData = LiftoffData.set_index('FLIGHT_ID')
+def PrepareData(DataInPaths, viz):
+    #'TAKEOFF_GROUND_ROLL_DISTANCE_STATED_(FEET)'
+    SensitiveRawData    = pd.read_csv(DataInPaths[0], index_col='FLIGHT_ID')
+    NonSensitiveRawData = pd.read_csv(DataInPaths[1], index_col='FLIGHT_ID')    
+    #drop variables that are highly correlated with the target dependent variable and/or are duplicative
+    NonSensitiveRawData.drop( ['N1_liftoff', 'N1_during_stated_takeoff_ground_roll', 'P64: Duration of Takeoff (Seconds)',
+       'P64: True Airspeed at Liftoff (knots)', 'LIFTOFF', 'ACTYPE',
+       'HEAD_WIND_KNOTS_TWENTY_POINT_LAGGING_AVERAGE'], axis = 1, inplace = True)
+
+    LiftoffData = SensitiveRawData[SensitiveRawData['LIFTOFF'] == 1].join(NonSensitiveRawData)
+
 
     #Change to make: Instead of dropping data, import only the columns we need
     #This will be a bit difficult as sometimes columns have the same name
-    MLData = LiftoffData.drop(['TIME_OFFSET', 'FLIGHT_ID.1', 'STATED_SEGMENT_START_OF_TAKEOFF', 'APT_AIRCRAFT_RUNWAY_STAGE',
+    MLData = LiftoffData.drop(['TIME_OFFSET', 'FLIGHT_ID.1', 'STATED_SEGMENT_START_OF_TAKEOFF',
                             'LIFTOFF', 'TIME_ON_GROUND_BEFORE_LIFTOFF_(SECONDS)', 'P64: Duration of Taxi Out (Minutes)',
                             'DURATION','SPEED_SOUND_START_EVENT', 'AFE_ALT', 'TAS_START_EVENT', 'P64: True Airspeed at Liftoff (knots)',
                             'GS_SEGMENT', 'TAS_SEGMENT', 'MACH_NUMBER_SEGMENT', 'LAT', 'LON', 'DISTANCE_START_EVENT', 'DISTANCE_FROM_RUNWAY_END_AT_DETECTED_LIFTOFF',
-                            'DISTANCE_END_EVENT', 'FUELFLOW_SEGMENT', 'THRUST_SEGMENT', 'LIFTOFF', 'APT_CODE', 'P64  Air Temperature (total best available) at Start of Event (library) (Deg Celsius)',
+                            'DISTANCE_END_EVENT', 'FUELFLOW_SEGMENT', 'THRUST_SEGMENT', 'LIFTOFF', 'APT_CODE',
                             'Takeoff Runway Starting Latitude', 'Takeoff Runway Starting Longitude', 'DISTANCE_FROM_RUNWAY_END_AT_DETECTED_START_OF_TAKEOFF',
                             'SHARE_OF_REMAINING_RUNWAY_LENGTH_AT_DETECTED_AIRBORNE_POINT_IN_RUNWAY_VICINITY', 'FEET_OF_REMAINING_RUNWAY_LENGTH_AT_DETECTED_AIRBORNE_POINT_IN_RUNWAY_VICINITY',
                             'RUNWAY_LENGTH', 'DISPLACED_THRESHOLD', 'DEPARTURE_AIRPORT_CODE', 'RUNWAY_END', 'EFFECTIVE_RUNWAY_LENGTH',
                             'SHARE_OF_REMAINING_EFFECTIVE_RUNWAY_LENGTH_AT_DETECTED_AIRBORNE_POINT_IN_RUNWAY_VICINITY', 'FEET_OF_REMAINING_EFFECTIVE_RUNWAY_LENGTH_AT_DETECTED_AIRBORNE_POINT_IN_RUNWAY_VICINITY',
                             'DISTANCE_FROM_THRESHOLD_AT_POINT_ONE', 'DISTANCE_FROM_POINT_ONE_FEET', 'GROUNDSPEED_AT_POINT_ONE_KNOTS',
                             'WELL-BEHAVED_TRAJECTORY', 'LATITUDE_AT_POINT_ONE', 'LONGITUDE_AT_POINT_ONE', 'LATITUDE_AT_DETECTED_AIRBORNE_POINT_IN_RUNWAY_VICINITY',
-                            'LONGITUDE_AT_DETECTED_AIRBORNE_POINT_IN_RUNWAY_VICINITY', 'ACTYPE', 'P64  Air Temperature (outside) at Start of Event (library) (Deg Celsius)',
-                            'STAGE_LENGTH_ID', 'STAGE_LENGTH_ID.1', 'DISTANCE_FROM_RUNWAY_END.1', 'ACTYPE.1'], axis=1)
+                            'LONGITUDE_AT_DETECTED_AIRBORNE_POINT_IN_RUNWAY_VICINITY', 'ACTYPE',
+                            'THRUST_SEGMENT', 'THRUST_START_EVENT',
+                            'P64: Average Fuel Flow to all Engines during Takeoff (kg/hr; start --> liftoff)',
+                            'P64: Fuel Burned by all Engines during Takeoff (kg)',
+                            'STAGE_LENGTH_ID', 'DISTANCE_FROM_RUNWAY_END.1', 'FUELFLOW_SEGMENT', 'FUELFLOW_START_EVENT'], axis=1)
 
-    MLData[['AIRPORT', 'AIRCRAFT_TYPE', 'RUNWAY', 'STAGE']] = MLData['APT_AIRCRAFT_RUNWAY_STAGE.1'].str.split('_', expand=True)
-    MLData = MLData.drop('APT_AIRCRAFT_RUNWAY_STAGE.1', axis = 1)
+    MLData[['AIRPORT', 'AIRFRAME', 'ENGINE', 'RUNWAY', 'STAGE']] = MLData['APT_AIRCRAFT_RUNWAY_STAGE'].str.split('_', expand=True)
+    MLData['AIRCRAFT_TYPE'] = MLData.AIRFRAME + '_' + MLData.ENGINE
+    MLData = MLData.drop(columns=['APT_AIRCRAFT_RUNWAY_STAGE', 'AIRFRAME', 'ENGINE'], axis = 1)
+    print('For verification, the following columns (except N1) were used to train the Machine Learning model to predict N1:'
+          ,MLData.columns.to_list()
+         )
     MLData = MLData.dropna()
     MLData = MLData.sample(frac = 1, replace = False)
 
@@ -73,7 +87,7 @@ def DefineAndTrainNN(Dataset, MainPath):
     model.compile(
                 optimizer = tf.keras.optimizers.Adam(learning_rate = 0.1),
                 loss = 'mse',
-                metrics = [tf.metrics.MeanSquaredError(), tf.keras.metrics.MeanAbsoluteError(), tfa.metrics.r_square.RSquare()])
+                metrics = [tf.metrics.MeanSquaredError(), tf.keras.metrics.MeanAbsoluteError()])#, tfa.metrics.r_square.RSquare()])
     
     #Train the model now
     checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
